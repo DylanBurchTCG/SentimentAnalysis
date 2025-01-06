@@ -1,22 +1,2 @@
-Microsoft Windows [Version 10.0.22631.4602]
-(c) Microsoft Corporation. All rights reserved.
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>rm 'Procfile'
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>[master 801fd1e] Switch to nixpacks.toml configuration
- 2 files changed, 4 insertions(+), 1 deletion(-)
- delete mode 100644 Procfile
- create mode 100644 nixpacks.toml
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
-(.venv) C:\Users\Dylan Burchfield\PycharmProjects\SentimentAnalysis>
+[start]
+cmd = "gunicorn app:app"
