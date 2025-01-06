@@ -3,17 +3,54 @@
 <head>
     <title>Review Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Add Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add Gauge.js -->
+    <script src="https://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
 </head>
 <body>
     <div class="container mt-5">
         <h1>Review Sentiment Dashboard</h1>
 
+        <!-- Add Location Filter -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <select id="location-filter" class="form-select">
+                    <option value="">All Locations</option>
+                    {% for location in locations %}
+                    <option value="{{ location }}">{{ location }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Add Gauge Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Current Sentiment</h5>
+                        <canvas id="gauge-30"></canvas>
+                        <p class="text-center">Last 30 Days: {{ "%.1f"|format(mood_30) }}%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Sentiment Trend</h5>
+                        <canvas id="trendLine"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Clouds Row -->
         <div class="row mt-4">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 30 Days</h5>
-                        <p>Sentiment Score: {{ "%.1f"|format(mood_30) }}%</p>
                         {% if wc_30 %}
                             <img src="{{ url_for('static', filename=wc_30) }}" class="img-fluid">
                         {% endif %}
@@ -24,7 +61,6 @@
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 60 Days</h5>
-                        <p>Sentiment Score: {{ "%.1f"|format(mood_60) }}%</p>
                         {% if wc_60 %}
                             <img src="{{ url_for('static', filename=wc_60) }}" class="img-fluid">
                         {% endif %}
@@ -35,7 +71,6 @@
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 90 Days</h5>
-                        <p>Sentiment Score: {{ "%.1f"|format(mood_90) }}%</p>
                         {% if wc_90 %}
                             <img src="{{ url_for('static', filename=wc_90) }}" class="img-fluid">
                         {% endif %}
@@ -44,5 +79,69 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Set up the gauge
+        var gauge = new Gauge(document.getElementById('gauge-30')).setOptions({
+            angle: 0,
+            lineWidth: 0.44,
+            radiusScale: 0.8,
+            pointer: {
+                length: 0.6,
+                strokeWidth: 0.035,
+                color: '#000000'
+            },
+            limitMax: false,
+            limitMin: false,
+            colorStart: '#FF4D4D',
+            colorStop: '#32CD32',
+            strokeColor: '#E0E0E0',
+            generateGradient: true,
+            gradientColors: ['#FF4D4D', '#FFA500', '#FFD700', '#9ACD32', '#32CD32'],
+            highDpiSupport: true
+        });
+        gauge.maxValue = 100;
+        gauge.setMinValue(0);
+        gauge.animationSpeed = 32;
+        gauge.set({{ mood_30 }});
+
+        // Set up the trend line
+        var ctx = document.getElementById('trendLine').getContext('2d');
+        var trendLine = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['90 Days', '60 Days', '30 Days'],
+                datasets: [{
+                    label: 'Sentiment Score',
+                    data: [{{ mood_90 }}, {{ mood_60 }}, {{ mood_30 }}],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // Add location filter functionality
+        document.getElementById('location-filter').addEventListener('change', function() {
+            // You'll need to implement the backend route for this
+            fetch('/filter?location=' + this.value)
+                .then(response => response.json())
+                .then(data => {
+                    // Update charts with new data
+                    gauge.set(data.mood_30);
+                    trendLine.data.datasets[0].data = [data.mood_90, data.mood_60, data.mood_30];
+                    trendLine.update();
+                });
+        });
+    </script>
 </body>
 </html>
