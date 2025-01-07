@@ -62,9 +62,10 @@
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title text-center">Current Sentiment</h5>
-                        <div class="gauge-container">
+                    <!-- Center the gauge using text-center -->
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Current Sentiment</h5>
+                        <div class="gauge-container d-inline-block">
                             <canvas id="gauge-30"></canvas>
                         </div>
                         <div class="sentiment-score">
@@ -128,11 +129,87 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tables for Top Words -->
+        <div class="row mt-5">
+            <!-- 30 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (30 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_30">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_30 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 60 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (60 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_60">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_60 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 90 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (90 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_90">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_90 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- JavaScript to handle gauge, chart, and property filter changes -->
+    <!-- Scripts for gauge, chart, property filter, and top words -->
     <script>
-        // Gauge initialization
+        // Initialize gauge
         var gaugeEl = document.getElementById('gauge-30');
         var gauge = new Gauge(gaugeEl).setOptions({
             angle: -0.2,
@@ -150,11 +227,11 @@
                 fractionDigits: 0
             },
             staticZones: [
-                {strokeStyle: "#FF4D4D", min: 0, max: 20},
-                {strokeStyle: "#FFA500", min: 20, max: 40},
-                {strokeStyle: "#FFD700", min: 40, max: 60},
-                {strokeStyle: "#9ACD32", min: 60, max: 80},
-                {strokeStyle: "#32CD32", min: 80, max: 100}
+                { strokeStyle: "#FF4D4D", min: 0,   max: 20 },
+                { strokeStyle: "#FFA500", min: 20,  max: 40 },
+                { strokeStyle: "#FFD700", min: 40,  max: 60 },
+                { strokeStyle: "#9ACD32", min: 60,  max: 80 },
+                { strokeStyle: "#32CD32", min: 80,  max: 100 }
             ],
             limitMax: false,
             limitMin: false,
@@ -163,10 +240,10 @@
         gauge.maxValue = 100;
         gauge.setMinValue(0);
         gauge.animationSpeed = 32;
-        // Initialize gauge with Jinja variable
+        // Set initial gauge with Jinja variable
         gauge.set({{ mood_30 }});
 
-        // Initialize trend line chart
+        // Trend chart
         var ctx = document.getElementById('trendLine').getContext('2d');
         var trendLine = new Chart(ctx, {
             type: 'line',
@@ -201,53 +278,59 @@
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: false
-                    }
+                    legend: { display: false }
                 }
             }
         });
 
-        // Listen for property selection changes
+        // Handle property change
         document.getElementById('location-filter').addEventListener('change', function() {
             const location = this.value;
-            console.log('Selected location:', location);
-
-            // Update page title
             document.querySelector('h1').textContent =
                 `Review Sentiment Dashboard ${location ? '- ' + location : ''}`;
 
-            // Make a fetch request to /filter
             fetch('/filter?location=' + encodeURIComponent(location))
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Received data:', data);
-
                     // Update gauge
                     gauge.set(data.mood_30);
                     document.querySelector('.sentiment-score').textContent =
                         `${data.mood_30.toFixed(1)}%`;
 
                     // Update trend line
-                    trendLine.data.datasets[0].data = [
-                        data.mood_90,
-                        data.mood_60,
-                        data.mood_30
-                    ];
+                    trendLine.data.datasets[0].data = [data.mood_90, data.mood_60, data.mood_30];
                     trendLine.update();
 
-                    // Update wordcloud images (30, 60, 90)
-                    ['30', '60', '90'].forEach(days => {
+                    // Update wordclouds
+                    ['30','60','90'].forEach(days => {
                         const img = document.getElementById(`wordcloud_${days}`);
                         if (img && data[`wc_${days}`]) {
-                            // Add a cache-busting timestamp
                             const newSrc = `/static/${data['wc_' + days]}?t=${Date.now()}`;
-                            console.log(`Updating wordcloud ${days} with src:`, newSrc);
                             img.src = newSrc;
                         }
                     });
+
+                    // Update top words tables
+                    // Each "top_words_##" is a list of [word, count]
+                    const tables = {
+                        '30': document.querySelector('#topWordsTable_30 tbody'),
+                        '60': document.querySelector('#topWordsTable_60 tbody'),
+                        '90': document.querySelector('#topWordsTable_90 tbody')
+                    };
+
+                    ['30','60','90'].forEach(days => {
+                        const tbody = tables[days];
+                        if (tbody && data[`top_words_${days}`]) {
+                            tbody.innerHTML = ''; // Clear old rows
+                            data[`top_words_${days}`].forEach(([word, count]) => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `<td>${word}</td><td>${count}</td>`;
+                                tbody.appendChild(row);
+                            });
+                        }
+                    });
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(err => console.error('Error fetching filter data:', err));
         });
     </script>
 </body>
