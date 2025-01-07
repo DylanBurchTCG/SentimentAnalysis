@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RoBERTa Review Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
+    <style>
+        .gauge-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .sentiment-score {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .filter-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .wordcloud-container {
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wordcloud-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">RoBERTa Review Sentiment Dashboard</h1>
+
+        <!-- Location Filter -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <label class="filter-label" for="location-filter">Select Property:</label>
+                <select id="location-filter" class="form-select">
+                    <option value="">All Properties</option>
+                    {% for location in locations %}
+                    <option value="{{ location }}">{{ location }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Gauge and Trend Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Current Sentiment (RoBERTa)</h5>
+                        <div class="gauge-container d-inline-block">
+                            <canvas id="gauge-30"></canvas>
+                        </div>
+                        <div class="sentiment-score">
+                            {{ "%.1f"|format(mood_30) }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Sentiment Trend (RoBERTa)</h5>
+                        <canvas id="trendLine"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Clouds Row -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Last 30 Days</h5>
+                        <div class="wordcloud-container">
+                            <img
+                                id="wordcloud_30"
+                                src="{{ url_for('static', filename=wc_30) }}?t={{ now }}"
+                                class="wordcloud-image"
+                                alt="30 day wordcloud">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Last 60 Days</h5>
+                        <div class="wordcloud-container">
+                            <img
+                                id="wordcloud_60"
+                                src="{{ url_for('static', filename=wc_60) }}?t={{ now }}"
+                                class="wordcloud-image"
+                                alt="60 day wordcloud">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Last 90 Days</h5>
+                        <div class="wordcloud-container">
+                            <img
+                                id="wordcloud_90"
+                                src="{{ url_for('static', filename=wc_90) }}?t={{ now }}"
+                                class="wordcloud-image"
+                                alt="90 day wordcloud">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables for Top Words -->
+        <div class="row mt-5">
+            <!-- 30 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (30 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_30">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_30 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 60 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (60 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_60">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_60 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 90 Days Table -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words (90 Days)</h5>
+                        <table class="table table-striped" id="topWordsTable_90">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for w, c in top_words_90 %}
+                                <tr>
+                                    <td>{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts for gauge, chart, property filter, and top words -->
+    <script>
+        // Initialize gauge
+        var gaugeEl = document.getElementById('gauge-30');
+        var gauge = new Gauge(gaugeEl).setOptions({
+            angle: -0.2,
+            lineWidth: 0.2,
+            radiusScale: 1,
+            pointer: {
+                length: 0.6,
+                strokeWidth: 0.035,
+                color: '#000000'
+            },
+            staticLabels: {
+                font: "12px sans-serif",
+                labels: [20, 40, 60, 80, 100],
+                color: "#000000",
+                fractionDigits: 0
+            },
+            staticZones: [
+                { strokeStyle: "#FF4D4D", min: 0,   max: 20 },
+                { strokeStyle: "#FFA500", min: 20,  max: 40 },
+                { strokeStyle: "#FFD700", min: 40,  max: 60 },
+                { strokeStyle: "#9ACD32", min: 60,  max: 80 },
+                { strokeStyle: "#32CD32", min: 80,  max: 100 }
+            ],
+            limitMax: false,
+            limitMin: false,
+            highDpiSupport: true
+        });
+        gauge.maxValue = 100;
+        gauge.setMinValue(0);
+        gauge.animationSpeed = 32;
+        // Set initial gauge with Jinja variable (already computed by RoBERTa)
+        gauge.set({{ mood_30 }});
+
+        // Trend chart
+        var ctx = document.getElementById('trendLine').getContext('2d');
+        var trendLine = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['90 Days', '60 Days', '30 Days'],
+                datasets: [{
+                    label: 'Sentiment Score',
+                    data: [{{ mood_90 }}, {{ mood_60 }}, {{ mood_30 }}],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#4CAF50',
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Handle property change
+        document.getElementById('location-filter').addEventListener('change', function() {
+            const location = this.value;
+            document.querySelector('h1').textContent =
+                `RoBERTa Review Sentiment Dashboard ${location ? '- ' + location : ''}`;
+
+            // If your Flask route is something like /roberta-filter instead of /filter:
+            fetch('/roberta-filter?location=' + encodeURIComponent(location))
+                .then(response => response.json())
+                .then(data => {
+                    // Update gauge
+                    gauge.set(data.mood_30);
+                    document.querySelector('.sentiment-score').textContent =
+                        `${data.mood_30.toFixed(1)}%`;
+
+                    // Update trend line
+                    trendLine.data.datasets[0].data = [data.mood_90, data.mood_60, data.mood_30];
+                    trendLine.update();
+
+                    // Update wordclouds
+                    ['30','60','90'].forEach(days => {
+                        const img = document.getElementById(`wordcloud_${days}`);
+                        if (img && data[`wc_${days}`]) {
+                            const newSrc = `/static/${data['wc_' + days]}?t=${Date.now()}`;
+                            img.src = newSrc;
+                        }
+                    });
+
+                    // Update top words tables
+                    const tables = {
+                        '30': document.querySelector('#topWordsTable_30 tbody'),
+                        '60': document.querySelector('#topWordsTable_60 tbody'),
+                        '90': document.querySelector('#topWordsTable_90 tbody')
+                    };
+
+                    ['30','60','90'].forEach(days => {
+                        const tbody = tables[days];
+                        if (tbody && data[`top_words_${days}`]) {
+                            tbody.innerHTML = '';
+                            data[`top_words_${days}`].forEach(([word, count]) => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `<td>${word}</td><td>${count}</td>`;
+                                tbody.appendChild(row);
+                            });
+                        }
+                    });
+                })
+                .catch(err => console.error('Error fetching filter data:', err));
+        });
+    </script>
+</body>
+</html>
