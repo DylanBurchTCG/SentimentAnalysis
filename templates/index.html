@@ -3,13 +3,24 @@
 <head>
     <title>Review Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
     <style>
         .gauge-container {
             width: 200px;
             height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin: 0 auto;
+            position: relative;
+        }
+        .gauge-container canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         .card {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -33,19 +44,113 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
+        }
+        .wordcloud-container.large {
+            height: 600px;
         }
         .wordcloud-image {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
+        .clickable {
+            cursor: pointer;
+            color: #0d6efd;
+        }
+        .clickable:hover {
+            text-decoration: underline;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .stat-box {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+        .context-card {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #dee2e6;
+        }
+        .context-card.positive {
+            border-left: 4px solid #28a745;
+        }
+        .context-card.negative {
+            border-left: 4px solid #dc3545;
+        }
+        .context-card.neutral {
+            border-left: 4px solid #6c757d;
+        }
+        .sentiment-indicator {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .sentiment-positive { background-color: #28a745; }
+        .sentiment-negative { background-color: #dc3545; }
+        .sentiment-neutral { background-color: #6c757d; }
+        .stat-label {
+            display: block;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #212529;
+        }
+        .context-metadata {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
+    <div class="modal fade" id="wordAnalysisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Word Analysis</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="word-stats mb-3">
+                        <h4 class="word-title mb-3"></h4>
+                        <div class="stats-grid">
+                            <div class="stat-box total-appearances">
+                                <span class="stat-label">Total Appearances</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                            <div class="stat-box positive-contexts">
+                                <span class="stat-label">Positive Contexts</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                            <div class="stat-box negative-contexts">
+                                <span class="stat-label">Negative Contexts</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="context-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container mt-5">
         <h1 class="mb-4">Review Sentiment Dashboard</h1>
 
-        <!-- Location Filter -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <label class="filter-label" for="location-filter">Select Property:</label>
@@ -58,14 +163,12 @@
             </div>
         </div>
 
-        <!-- Gauge and Trend Charts Row -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card">
-                    <!-- Center the gauge using text-center -->
                     <div class="card-body text-center">
                         <h5 class="card-title">Current Sentiment</h5>
-                        <div class="gauge-container d-inline-block">
+                        <div class="gauge-container">
                             <canvas id="gauge-30"></canvas>
                         </div>
                         <div class="sentiment-score">
@@ -84,18 +187,14 @@
             </div>
         </div>
 
-        <!-- Word Clouds Row -->
         <div class="row mt-4">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 30 Days</h5>
-                        <div class="wordcloud-container">
-                            <img
-                                id="wordcloud_30"
-                                src="{{ url_for('static', filename=wc_30) }}?t={{ now }}"
-                                class="wordcloud-image"
-                                alt="30 day wordcloud">
+                        <div class="wordcloud-container" onclick="promptWord('30')">
+                            <img id="wordcloud_30" src="{{ url_for('static', filename=wc_30) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="30 day wordcloud">
                         </div>
                     </div>
                 </div>
@@ -104,12 +203,9 @@
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 60 Days</h5>
-                        <div class="wordcloud-container">
-                            <img
-                                id="wordcloud_60"
-                                src="{{ url_for('static', filename=wc_60) }}?t={{ now }}"
-                                class="wordcloud-image"
-                                alt="60 day wordcloud">
+                        <div class="wordcloud-container" onclick="promptWord('60')">
+                            <img id="wordcloud_60" src="{{ url_for('static', filename=wc_60) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="60 day wordcloud">
                         </div>
                     </div>
                 </div>
@@ -118,98 +214,71 @@
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Last 90 Days</h5>
-                        <div class="wordcloud-container">
-                            <img
-                                id="wordcloud_90"
-                                src="{{ url_for('static', filename=wc_90) }}?t={{ now }}"
-                                class="wordcloud-image"
-                                alt="90 day wordcloud">
+                        <div class="wordcloud-container" onclick="promptWord('90')">
+                            <img id="wordcloud_90" src="{{ url_for('static', filename=wc_90) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="90 day wordcloud">
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tables for Top Words -->
-        <div class="row mt-5">
-            <!-- 30 Days Table -->
-            <div class="col-md-4">
+        <div class="row mt-4">
+            <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Top Words (30 Days)</h5>
-                        <table class="table table-striped" id="topWordsTable_30">
-                            <thead>
-                                <tr>
-                                    <th>Word</th>
-                                    <th>Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for w, c in top_words_30 %}
-                                <tr>
-                                    <td>{{ w }}</td>
-                                    <td>{{ c }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <!-- 60 Days Table -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Top Words (60 Days)</h5>
-                        <table class="table table-striped" id="topWordsTable_60">
-                            <thead>
-                                <tr>
-                                    <th>Word</th>
-                                    <th>Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for w, c in top_words_60 %}
-                                <tr>
-                                    <td>{{ w }}</td>
-                                    <td>{{ c }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <!-- 90 Days Table -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Top Words (90 Days)</h5>
-                        <table class="table table-striped" id="topWordsTable_90">
-                            <thead>
-                                <tr>
-                                    <th>Word</th>
-                                    <th>Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for w, c in top_words_90 %}
-                                <tr>
-                                    <td>{{ w }}</td>
-                                    <td>{{ c }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <h5 class="card-title">Last 365 Days Overview</h5>
+                        <div class="wordcloud-container large" onclick="promptWord('365')">
+                            <img id="wordcloud_365" src="{{ url_for('static', filename=wc_365) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="365 day wordcloud">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="row mt-5">
+            {% for period, title in [('30', '30 Days'), ('60', '60 Days'), ('90', '90 Days'), ('365', 'Year')] %}
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Words ({{ title }})</h5>
+                        <table class="table table-striped" id="topWordsTable_{{ period }}">
+                            <thead>
+                                <tr>
+                                    <th>Word</th>
+                                    <th>Count</th>
+                                    <th>Sentiment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set words = namespace(data=top_words_30 if period == '30' else
+                                                            top_words_60 if period == '60' else
+                                                            top_words_90 if period == '90' else top_words_365) %}
+                                {% set sentiments = namespace(data=word_sentiments_30 if period == '30' else
+                                                                word_sentiments_60 if period == '60' else
+                                                                word_sentiments_90 if period == '90' else word_sentiments_365) %}
+                                {% for w, c in words.data %}
+                                <tr>
+                                    <td class="clickable" onclick="analyzeWord('{{ w }}')">{{ w }}</td>
+                                    <td>{{ c }}</td>
+                                    <td>
+                                        {% set sentiment = sentiments.data.get(w, 0) %}
+                                        <span class="sentiment-indicator {{ 'sentiment-positive' if sentiment > 0 else 'sentiment-negative' if sentiment < 0 else 'sentiment-neutral' }}"></span>
+                                        {{ "%.2f"|format(sentiment) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- Scripts for gauge, chart, property filter, and top words -->
     <script>
-        // Initialize gauge
         var gaugeEl = document.getElementById('gauge-30');
         var gauge = new Gauge(gaugeEl).setOptions({
             angle: -0.2,
@@ -227,11 +296,11 @@
                 fractionDigits: 0
             },
             staticZones: [
-                { strokeStyle: "#FF4D4D", min: 0,   max: 20 },
-                { strokeStyle: "#FFA500", min: 20,  max: 40 },
-                { strokeStyle: "#FFD700", min: 40,  max: 60 },
-                { strokeStyle: "#9ACD32", min: 60,  max: 80 },
-                { strokeStyle: "#32CD32", min: 80,  max: 100 }
+                { strokeStyle: "#FF4D4D", min: 0, max: 20 },
+                { strokeStyle: "#FFA500", min: 20, max: 40 },
+                { strokeStyle: "#FFD700", min: 40, max: 60 },
+                { strokeStyle: "#9ACD32", min: 60, max: 80 },
+                { strokeStyle: "#32CD32", min: 80, max: 100 }
             ],
             limitMax: false,
             limitMin: false,
@@ -240,25 +309,23 @@
         gauge.maxValue = 100;
         gauge.setMinValue(0);
         gauge.animationSpeed = 32;
-        // Set initial gauge with Jinja variable
         gauge.set({{ mood_30 }});
 
-        // Trend chart
         var ctx = document.getElementById('trendLine').getContext('2d');
         var trendLine = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['90 Days', '60 Days', '30 Days'],
+                labels: ['30', '60', '90', '365'],
                 datasets: [{
                     label: 'Sentiment Score',
-                    data: [{{ mood_90 }}, {{ mood_60 }}, {{ mood_30 }}],
+                    data: [{{ mood_30 }}, {{ mood_60 }}, {{ mood_90 }}, {{ mood_365 }}],
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
                     tension: 0.4,
                     fill: true,
                     pointBackgroundColor: '#4CAF50',
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
@@ -274,16 +341,71 @@
                     x: {
                         grid: {
                             display: false
+                        },
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return this.getLabelForValue(value) + ' Days';
+                            }
                         }
                     }
                 },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Sentiment: ' + context.raw.toFixed(1) + '%';
+                            }
+                        }
+                    }
                 }
             }
         });
 
-        // Handle property change
+        const wordModal = new bootstrap.Modal(document.getElementById('wordAnalysisModal'));
+
+        function analyzeWord(word) {
+            fetch(`/word_analysis/${encodeURIComponent(word)}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('.word-title').textContent = `Analysis of "${word}"`;
+                    document.querySelector('.total-appearances .stat-value').textContent = data.total_appearances;
+                    document.querySelector('.positive-contexts .stat-value').textContent = data.positive_contexts;
+                    document.querySelector('.negative-contexts .stat-value').textContent = data.negative_contexts;
+
+                    const contextList = document.querySelector('.context-list');
+                    contextList.innerHTML = '';
+
+                    data.contexts.forEach(context => {
+                        const sentimentClass = context.sentiment > 0 ? 'positive' :
+                                             context.sentiment < 0 ? 'negative' : 'neutral';
+
+                        const contextCard = document.createElement('div');
+                        contextCard.className = `context-card ${sentimentClass}`;
+                        contextCard.innerHTML = `
+                            <div class="context-text">${context.comment}</div>
+                            <div class="context-metadata">
+                                Rating: ${context.rating} | Date: ${context.date}
+                            </div>
+                        `;
+                        contextList.appendChild(contextCard);
+                    });
+
+                    wordModal.show();
+                })
+                .catch(err => {
+                    console.error('Error analyzing word:', err);
+                    alert('Error analyzing word. Please try again.');
+                });
+        }
+
+        function promptWord(period) {
+            const word = prompt('Enter word to analyze from word cloud:');
+            if (word) {
+                analyzeWord(word);
+            }
+        }
+
         document.getElementById('location-filter').addEventListener('change', function() {
             const location = this.value;
             document.querySelector('h1').textContent =
@@ -292,17 +414,19 @@
             fetch('/filter?location=' + encodeURIComponent(location))
                 .then(response => response.json())
                 .then(data => {
-                    // Update gauge
                     gauge.set(data.mood_30);
                     document.querySelector('.sentiment-score').textContent =
                         `${data.mood_30.toFixed(1)}%`;
 
-                    // Update trend line
-                    trendLine.data.datasets[0].data = [data.mood_90, data.mood_60, data.mood_30];
+                    trendLine.data.datasets[0].data = [
+                        data.mood_30,
+                        data.mood_60,
+                        data.mood_90,
+                        data.mood_365
+                    ];
                     trendLine.update();
 
-                    // Update wordclouds
-                    ['30','60','90'].forEach(days => {
+                    ['30', '60', '90', '365'].forEach(days => {
                         const img = document.getElementById(`wordcloud_${days}`);
                         if (img && data[`wc_${days}`]) {
                             const newSrc = `/static/${data['wc_' + days]}?t=${Date.now()}`;
@@ -310,27 +434,33 @@
                         }
                     });
 
-                    // Update top words tables
-                    // Each "top_words_##" is a list of [word, count]
-                    const tables = {
-                        '30': document.querySelector('#topWordsTable_30 tbody'),
-                        '60': document.querySelector('#topWordsTable_60 tbody'),
-                        '90': document.querySelector('#topWordsTable_90 tbody')
-                    };
-
-                    ['30','60','90'].forEach(days => {
-                        const tbody = tables[days];
+                    ['30', '60', '90', '365'].forEach(days => {
+                        const tbody = document.querySelector(`#topWordsTable_${days} tbody`);
                         if (tbody && data[`top_words_${days}`]) {
-                            tbody.innerHTML = ''; // Clear old rows
+                            tbody.innerHTML = '';
                             data[`top_words_${days}`].forEach(([word, count]) => {
+                                const sentiment = data[`word_sentiments_${days}`][word] || 0;
+                                const sentimentClass = sentiment > 0 ? 'sentiment-positive' :
+                                                     sentiment < 0 ? 'sentiment-negative' :
+                                                     'sentiment-neutral';
                                 const row = document.createElement('tr');
-                                row.innerHTML = `<td>${word}</td><td>${count}</td>`;
+                                row.innerHTML = `
+                                    <td class="clickable" onclick="analyzeWord('${word}')">${word}</td>
+                                    <td>${count}</td>
+                                    <td>
+                                        <span class="sentiment-indicator ${sentimentClass}"></span>
+                                        ${sentiment.toFixed(2)}
+                                    </td>
+                                `;
                                 tbody.appendChild(row);
                             });
                         }
                     });
                 })
-                .catch(err => console.error('Error fetching filter data:', err));
+                .catch(err => {
+                    console.error('Error fetching filter data:', err);
+                    alert('Error updating dashboard. Please try again.');
+                });
         });
     </script>
 </body>
