@@ -67,13 +67,43 @@ def clean_text(text):
     return text
 
 
-def get_sentiment(text):
+def get_sentiment(text, rating=None):
     text = clean_text(text)
     analysis = TextBlob(text)
+
+    # Get base polarity
     polarity = analysis.sentiment.polarity
+
+    # Adjust for critical issues (safety, health, legal)
+    critical_terms = {
+        'shooting': -0.8,
+        'scam': -0.7,
+        'unsafe': -0.7,
+        'roach': -0.6,
+        'broke': -0.5,
+        'poop': -0.5,
+        'trash': -0.4,
+        'homeless': -0.4,
+        'broken': -0.4,
+        'rude': -0.3
+    }
+
+    for term, impact in critical_terms.items():
+        if term in text.lower():
+            polarity += impact
+
+    # If we have a rating, factor it in heavily
+    if rating is not None:
+        rating_polarity = (rating - 3) / 2  # Convert 1-5 scale to -1 to 1
+        polarity = (polarity + rating_polarity * 2) / 3  # Weight rating more heavily
+
+    # Strengthen negative sentiments
     if polarity < 0:
         polarity *= 1.5
+
+    # Scale [-1..+1] to [20..100]
     score = (polarity + 1) * 40 + 20
+
     return min(max(score, 20), 100), polarity
 
 
