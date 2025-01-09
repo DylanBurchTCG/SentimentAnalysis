@@ -25,6 +25,7 @@
         .card {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transition: 0.3s;
+            height: 100%;
         }
         .card:hover {
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
@@ -40,14 +41,14 @@
             margin-bottom: 5px;
         }
         .wordcloud-container {
-            height: 400px;
+            height: 300px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
         }
         .wordcloud-container.large {
-            height: 600px;
+            height: 400px;
         }
         .wordcloud-image {
             max-width: 100%;
@@ -117,6 +118,7 @@
     </style>
 </head>
 <body>
+    <!-- Word Analysis Modal -->
     <div class="modal fade" id="wordAnalysisModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -148,9 +150,11 @@
         </div>
     </div>
 
+    <!-- Main Dashboard Container -->
     <div class="container mt-5">
         <h1 class="mb-4">Review Sentiment Dashboard</h1>
 
+        <!-- Location Filter -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <label class="filter-label" for="location-filter">Select Property:</label>
@@ -163,16 +167,17 @@
             </div>
         </div>
 
+        <!-- Gauge and Trend Line -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body text-center">
-                        <h5 class="card-title">Current Sentiment</h5>
+                        <h5 class="card-title">Current Sentiment (90 Days)</h5>
                         <div class="gauge-container">
-                            <canvas id="gauge-30"></canvas>
+                            <canvas id="gauge-90"></canvas>
                         </div>
                         <div class="sentiment-score">
-                            {{ "%.1f"|format(mood_30) }}%
+                            {{ "%.1f"|format(mood_90) }}%
                         </div>
                     </div>
                 </div>
@@ -187,29 +192,8 @@
             </div>
         </div>
 
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Last 30 Days</h5>
-                        <div class="wordcloud-container" onclick="promptWord('30')">
-                            <img id="wordcloud_30" src="{{ url_for('static', filename=wc_30) }}?t={{ now }}"
-                                 class="wordcloud-image" alt="30 day wordcloud">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Last 60 Days</h5>
-                        <div class="wordcloud-container" onclick="promptWord('60')">
-                            <img id="wordcloud_60" src="{{ url_for('static', filename=wc_60) }}?t={{ now }}"
-                                 class="wordcloud-image" alt="60 day wordcloud">
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <!-- Word Clouds (90, 120, 180 Days) -->
+        <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
@@ -221,13 +205,36 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-12">
+            <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Last 365 Days Overview</h5>
+                        <h5 class="card-title">Last 120 Days</h5>
+                        <div class="wordcloud-container" onclick="promptWord('120')">
+                            <img id="wordcloud_120" src="{{ url_for('static', filename=wc_120) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="120 day wordcloud">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Last 180 Days</h5>
+                        <div class="wordcloud-container" onclick="promptWord('180')">
+                            <img id="wordcloud_180" src="{{ url_for('static', filename=wc_180) }}?t={{ now }}"
+                                 class="wordcloud-image" alt="180 day wordcloud">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 365 Days Word Cloud -->
+        <div class="row mb-4">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Last 365 Days</h5>
                         <div class="wordcloud-container large" onclick="promptWord('365')">
                             <img id="wordcloud_365" src="{{ url_for('static', filename=wc_365) }}?t={{ now }}"
                                  class="wordcloud-image" alt="365 day wordcloud">
@@ -237,40 +244,43 @@
             </div>
         </div>
 
-        <div class="row mt-5">
-            {% for period, title in [('30', '30 Days'), ('60', '60 Days'), ('90', '90 Days'), ('365', 'Year')] %}
+        <!-- Top Words Tables -->
+        <div class="row mt-4">
+            {% for period, title in [('90', '90 Days'), ('120', '120 Days'), ('180', '180 Days'), ('365', 'Year')] %}
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Top Words ({{ title }})</h5>
-                        <table class="table table-striped" id="topWordsTable_{{ period }}">
-                            <thead>
-                                <tr>
-                                    <th>Word</th>
-                                    <th>Count</th>
-                                    <th>Sentiment</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% set words = namespace(data=top_words_30 if period == '30' else
-                                                            top_words_60 if period == '60' else
-                                                            top_words_90 if period == '90' else top_words_365) %}
-                                {% set sentiments = namespace(data=word_sentiments_30 if period == '30' else
-                                                                word_sentiments_60 if period == '60' else
-                                                                word_sentiments_90 if period == '90' else word_sentiments_365) %}
-                                {% for w, c in words.data %}
-                                <tr>
-                                    <td class="clickable" onclick="analyzeWord('{{ w }}')">{{ w }}</td>
-                                    <td>{{ c }}</td>
-                                    <td>
-                                        {% set sentiment = sentiments.data.get(w, 0) %}
-                                        <span class="sentiment-indicator {{ 'sentiment-positive' if sentiment > 0 else 'sentiment-negative' if sentiment < 0 else 'sentiment-neutral' }}"></span>
-                                        {{ "%.2f"|format(sentiment) }}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="topWordsTable_{{ period }}">
+                                <thead>
+                                    <tr>
+                                        <th>Word</th>
+                                        <th>Count</th>
+                                        <th>Sentiment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set words = namespace(data=top_words_90 if period == '90' else
+                                                                top_words_120 if period == '120' else
+                                                                top_words_180 if period == '180' else top_words_365) %}
+                                    {% set sentiments = namespace(data=word_sentiments_90 if period == '90' else
+                                                                    word_sentiments_120 if period == '120' else
+                                                                    word_sentiments_180 if period == '180' else word_sentiments_365) %}
+                                    {% for w, c in words.data %}
+                                    <tr>
+                                        <td class="clickable" onclick="analyzeWord('{{ w }}')">{{ w }}</td>
+                                        <td>{{ c }}</td>
+                                        <td>
+                                            {% set sentiment = sentiments.data.get(w, 0) %}
+                                            <span class="sentiment-indicator {{ 'sentiment-positive' if sentiment > 0 else 'sentiment-negative' if sentiment < 0 else 'sentiment-neutral' }}"></span>
+                                            {{ "%.2f"|format(sentiment) }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -279,7 +289,8 @@
     </div>
 
     <script>
-        var gaugeEl = document.getElementById('gauge-30');
+        // Initialize Gauge for 90 Days Sentiment
+        var gaugeEl = document.getElementById('gauge-90');
         var gauge = new Gauge(gaugeEl).setOptions({
             angle: -0.2,
             lineWidth: 0.2,
@@ -309,16 +320,17 @@
         gauge.maxValue = 100;
         gauge.setMinValue(0);
         gauge.animationSpeed = 32;
-        gauge.set({{ mood_30 }});
+        gauge.set({{ mood_90 }});
 
+        // Initialize Sentiment Trend Line Chart
         var ctx = document.getElementById('trendLine').getContext('2d');
         var trendLine = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['30', '60', '90', '365'],
+                labels: ['90', '120', '180', '365'],
                 datasets: [{
                     label: 'Sentiment Score',
-                    data: [{{ mood_30 }}, {{ mood_60 }}, {{ mood_90 }}, {{ mood_365 }}],
+                    data: [{{ mood_90 }}, {{ mood_120 }}, {{ mood_180 }}, {{ mood_365 }}],
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
                     tension: 0.4,
@@ -330,6 +342,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -362,8 +375,10 @@
             }
         });
 
+        // Initialize Bootstrap Modal for Word Analysis
         const wordModal = new bootstrap.Modal(document.getElementById('wordAnalysisModal'));
 
+        // Function to Analyze a Word
         function analyzeWord(word) {
             fetch(`/word_analysis/${encodeURIComponent(word)}`)
                 .then(response => response.json())
@@ -399,6 +414,7 @@
                 });
         }
 
+        // Function to Prompt User for Word Input from Word Cloud
         function promptWord(period) {
             const word = prompt('Enter word to analyze from word cloud:');
             if (word) {
@@ -406,6 +422,7 @@
             }
         }
 
+        // Handle Location Filter Change
         document.getElementById('location-filter').addEventListener('change', function() {
             const location = this.value;
             document.querySelector('h1').textContent =
@@ -414,19 +431,22 @@
             fetch('/filter?location=' + encodeURIComponent(location))
                 .then(response => response.json())
                 .then(data => {
-                    gauge.set(data.mood_30);
+                    // Update Gauge for 90 Days
+                    gauge.set(data.mood_90);
                     document.querySelector('.sentiment-score').textContent =
-                        `${data.mood_30.toFixed(1)}%`;
+                        `${data.mood_90.toFixed(1)}%`;
 
+                    // Update Trend Line Chart
                     trendLine.data.datasets[0].data = [
-                        data.mood_30,
-                        data.mood_60,
                         data.mood_90,
+                        data.mood_120,
+                        data.mood_180,
                         data.mood_365
                     ];
                     trendLine.update();
 
-                    ['30', '60', '90', '365'].forEach(days => {
+                    // Update Word Clouds
+                    ['90', '120', '180', '365'].forEach(days => {
                         const img = document.getElementById(`wordcloud_${days}`);
                         if (img && data[`wc_${days}`]) {
                             const newSrc = `/static/${data['wc_' + days]}?t=${Date.now()}`;
@@ -434,7 +454,8 @@
                         }
                     });
 
-                    ['30', '60', '90', '365'].forEach(days => {
+                    // Update Top Words Tables
+                    ['90', '120', '180', '365'].forEach(days => {
                         const tbody = document.querySelector(`#topWordsTable_${days} tbody`);
                         if (tbody && data[`top_words_${days}`]) {
                             tbody.innerHTML = '';
