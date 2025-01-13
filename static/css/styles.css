@@ -1,0 +1,233 @@
+.gauge-container {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.gauge-container canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.card {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: 0.3s;
+    height: 100%;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+.sentiment-score {
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.filter-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.wordcloud-container {
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.wordcloud-container.large {
+    height: 400px;
+}
+
+.wordcloud-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-box {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+    text-align: center;
+}
+
+.context-card {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.context-card.positive {
+    border-left: 4px solid #28a745;
+}
+
+.context-card.negative {
+    border-left: 4px solid #dc3545;
+}
+
+.context-card.neutral {
+    border-left: 4px solid #6c757d;
+}
+
+.clickable {
+    cursor: pointer;
+    color: #0d6efd;
+}
+
+.clickable:hover {
+    text-decoration: underline;
+}
+
+.sentiment-indicator {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.sentiment-positive {
+    background-color: #28a745;
+}
+
+.sentiment-negative {
+    background-color: #dc3545;
+}
+
+.sentiment-neutral {
+    background-color: #6c757d;
+}
+
+
+.table th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #212529;
+}
+
+.context-metadata {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.word-title {
+    color: #212529;
+    margin-bottom: 1.5rem;
+}
+
+.context-text {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    margin-bottom: 0.5rem;
+}
+.summaries-content {
+    margin-top: 1rem;
+}
+
+.summary-section {
+    padding: 1rem 0;
+}
+
+.summary-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #212529;
+    margin-bottom: 0;
+}
+
+.trouble-points, .suggestions {
+    background-color: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 0.5rem;
+}
+
+.trouble-points {
+    border-left: 4px solid #dc3545;
+}
+
+.suggestions {
+    border-left: 4px solid #198754;
+}
+
+.trouble-points h6, .suggestions h6, .overview-section h6 {
+    color: #495057;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.concern-list, .suggestion-list {
+    margin-bottom: 0;
+    padding-left: 1.25rem;
+}
+
+.concern-list li, .suggestion-list li {
+    margin-bottom: 0.75rem;
+    color: #495057;
+}
+
+.concern-list li:last-child, .suggestion-list li:last-child {
+    margin-bottom: 0;
+}
+
+.period-note {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+.summary-placeholder {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+.overview-section {
+    margin-bottom: 1.5rem;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
